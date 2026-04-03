@@ -10,9 +10,11 @@ function makeBands(config: SimConfig): OrbitBand[] {
     id: `band-${i + 1}`,
     altitudeKm: 300 + i * 150,
     radius: 1.8 + i * 0.35,
+    inclination: ((i * 0.4) - 0.6 + Math.random() * 0.2),
     satelliteCount: config.satellitesPerBand,
     debrisCount: 0,
-risk: 0, }));
+    risk: 0,
+  }));
 }
 function makeSatellites(bands: OrbitBand[]): Satellite[] {
   return bands.flatMap((band) =>
@@ -33,6 +35,7 @@ config,
 bands,
 satellites,
 debris,
+collisionEffects: [],
 running: false,
 status: "stable",
 metrics: {
