@@ -4,6 +4,7 @@ export type OrbitBand = {
   id: string;
   altitudeKm: number;
   radius: number;
+  inclination: number;
   satelliteCount: number;
   debrisCount: number;
   risk: number;
@@ -39,6 +40,11 @@ export type SimMetrics = {
   unusableBands: number;
 };
 export type TimelinePoint = SimMetrics;
+export type CollisionEffect = {
+  id: string;
+  position: [number, number, number];
+  createdAt: number;
+};
 export type SimEvent = {
   id: string;
   t: number;
@@ -49,6 +55,7 @@ export type SimState = {
   bands: OrbitBand[];
   satellites: Satellite[];
   debris: DebrisFragment[];
+  collisionEffects: CollisionEffect[];
   metrics: SimMetrics;
   history: TimelinePoint[];
   events: SimEvent[];
