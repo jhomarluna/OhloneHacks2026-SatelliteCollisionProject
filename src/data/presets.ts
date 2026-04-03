@@ -7,6 +7,7 @@ export const defaultConfig: SimConfig = {
   cleanupRate: 0.01,
   bandCount: 4,
   satellitesPerBand: 30,
+  launchRate: 0,
 };
 export const denseOrbitConfig: SimConfig = {
   ...defaultConfig,

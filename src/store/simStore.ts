@@ -9,6 +9,7 @@ import type {
   SimState,
   SimStatus,
 } from "../types/sim";
+
 type Store = SimState & {
   setConfig: (patch: Partial<SimConfig>) => void;
   setRunning: (running: boolean) => void;
@@ -17,8 +18,11 @@ type Store = SimState & {
   pushEvent: (event: SimEvent) => void;
   setStatus: (status: SimStatus) => void;
   setMetrics: (metrics: SimMetrics) => void;
+  loadRealData: (payload: Partial<SimState> & { realDataTotal: number }) => void;
 };
+
 const initial = createInitialState(defaultConfig);
+
 export const useSimStore = create<Store>((set) => ({
   ...initial,
   setConfig: (patch) =>
@@ -34,4 +38,10 @@ export const useSimStore = create<Store>((set) => ({
     })),
   setStatus: (status) => set({ status }),
   setMetrics: (metrics) => set({ metrics }),
+  loadRealData: (payload) =>
+    set((state) => ({
+      ...state,
+      ...payload,
+      config: { ...state.config },
+    })),
 }));

@@ -31,6 +31,7 @@ export type SimConfig = {
   cleanupRate: number;
   bandCount: number;
   satellitesPerBand: number;
+  launchRate: number; // new satellites deployed per tick (0 = off)
 };
 export type SimMetrics = {
   time: number;
@@ -61,4 +62,5 @@ export type SimState = {
   events: SimEvent[];
   status: SimStatus;
   running: boolean;
+  realDataTotal: number | null; // total tracked objects from CelesTrak
 };

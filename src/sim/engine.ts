@@ -2,6 +2,7 @@ import { computeBandRisk, shouldTriggerCollision } from "./collision";
 import type {
   CollisionEffect,
   DebrisFragment,
+  Satellite,
   SimEvent,
   SimState,
   TimelinePoint,
@@ -13,10 +14,24 @@ function id(prefix: string) {
 
 export function tickSimulation(prev: SimState): Partial<SimState> {
   const nextBands = prev.bands.map((band) => ({ ...band }));
-  const nextSatellites = prev.satellites.map((sat) => ({
+  const nextSatellites: Satellite[] = prev.satellites.map((sat) => ({
     ...sat,
     angle: sat.angle + sat.angularVelocity * prev.config.timeScale,
   }));
+
+  // Launch new satellites based on launchRate
+  if (prev.config.launchRate > 0 && nextBands.length > 0) {
+    for (let i = 0; i < prev.config.launchRate; i++) {
+      const band = nextBands[Math.floor(Math.random() * nextBands.length)];
+      nextSatellites.push({
+        id: id(`${band.id}-sat`),
+        bandId: band.id,
+        angle: Math.random() * Math.PI * 2,
+        angularVelocity: 0.002 + Math.random() * 0.004,
+        active: true,
+      });
+    }
+  }
   const nextDebris = prev.debris
     .map((frag) => ({
       ...frag,

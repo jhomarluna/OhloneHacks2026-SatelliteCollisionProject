@@ -38,6 +38,7 @@ debris,
 collisionEffects: [],
 running: false,
 status: "stable",
+realDataTotal: null,
 metrics: {
       time: 0,
       activeSatellites: satellites.length,
