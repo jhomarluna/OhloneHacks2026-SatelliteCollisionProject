@@ -4,7 +4,7 @@ import * as THREE from 'three'
 import { useSimStore } from '../store/simStore'
 
 const DEG2RAD = Math.PI / 180
-const MAX_SATS = 5000
+const MAX_SATS = 30000
 
 export function Satellites() {
   const satellites = useSimStore((s) => s.satellites)

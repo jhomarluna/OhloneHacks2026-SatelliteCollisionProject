@@ -78,6 +78,51 @@ button:hover {
   border-color: #475569;
 }
 
+/* Satellite count display */
+.sat-count-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+  padding: 6px 10px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.sat-count-label {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.sat-count-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #e2e8f0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Launch button */
+.btn-launch {
+  border-color: #1d4ed8 !important;
+  background: #0d1f4a !important;
+  color: #93c5fd !important;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.btn-launch:hover {
+  background: #1e3a8a !important;
+}
+.btn-sub {
+  font-size: 0.78rem;
+  opacity: 0.7;
+}
+
+.col { display: flex; flex-direction: column; gap: 6px; }
+
 /* Warn / destructive button */
 .btn-warn {
   border-color: #b45309 !important;

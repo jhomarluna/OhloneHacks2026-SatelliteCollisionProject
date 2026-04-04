@@ -6,7 +6,7 @@ export const defaultConfig: SimConfig = {
   debrisSpreadChance: 0.15,
   cleanupRate: 0.01,
   bandCount: 8,
-  satellitesPerBand: 150, // dense swarm across 8 shells
+  satellitesPerBand: 1250, // 8 × 1250 = ~10,000 satellites — current real-world LEO population
 };
 export const denseOrbitConfig: SimConfig = {
   ...defaultConfig,
