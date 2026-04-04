@@ -38,7 +38,7 @@ export function SceneRoot() {
   }, [setRealSatellites, setCelestrakStatus])
 
   return (
-    <Canvas camera={{ position: [0, 2.5, 7], fov: 55 }}>
+    <Canvas camera={{ position: [0, 4, 13], fov: 50 }}>
       {/* Dark ambient + cyan-tinted directional for sci-fi feel */}
       <ambientLight intensity={0.3} color="#1e3a5f" />
       <directionalLight position={[5, 3, 5]} intensity={0.8} color="#a5f3fc" />
@@ -62,8 +62,8 @@ export function SceneRoot() {
 
       <OrbitControls
         enablePan={false}
-        minDistance={3}
-        maxDistance={15}
+        minDistance={6}
+        maxDistance={30}
         autoRotate
         autoRotateSpeed={0.3}
         enableDamping

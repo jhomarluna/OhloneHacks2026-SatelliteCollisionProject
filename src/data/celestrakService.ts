@@ -1,8 +1,9 @@
 import type { RealSatellite } from '../types/sim';
 
-// Scene constants — calibrated to Earth.tsx radius (1.2) and init.ts bands (300km → 1.8)
-export const EARTH_SCENE_RADIUS = 1.2;
-export const LEO_KM_TO_SCENE = 0.002; // (1.8 - 1.2) / 300km
+// Scene constants — Earth radius 2.5 scene units, true-proportion LEO scale
+// Earth real radius ≈ 6371 km → scale = 2.5 / 6371 ≈ 0.000392 per km
+export const EARTH_SCENE_RADIUS = 2.5;
+export const LEO_KM_TO_SCENE = 2.5 / 6371; // ≈ 0.000392 per km
 
 export function altKmToSceneRadius(altKm: number): number {
   return EARTH_SCENE_RADIUS + altKm * LEO_KM_TO_SCENE;

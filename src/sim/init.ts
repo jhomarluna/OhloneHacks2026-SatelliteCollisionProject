@@ -13,7 +13,8 @@ function makeBands(config: SimConfig): OrbitBand[] {
   return Array.from({ length: config.bandCount }, (_, i) => ({
     id: `band-${i + 1}`,
     altitudeKm: 300 + i * 100,
-    radius: 1.8 + i * 0.18,
+    // Realistic LEO proportion: Earth radius = 2.5, Earth real radius = 6371 km
+    radius: 2.5 * (1 + (300 + i * 100) / 6371),
     inclination: BAND_INCLINATIONS[i % BAND_INCLINATIONS.length],
     satelliteCount: config.satellitesPerBand,
     debrisCount: 0,
