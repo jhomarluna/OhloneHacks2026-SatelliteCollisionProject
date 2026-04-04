@@ -1,4 +1,5 @@
 import { computeBandRisk, shouldTriggerCollision } from "./collision";
+import { orbitalAngularVelocity } from "./init";
 import type {
   CollisionEffect,
   DebrisFragment,
@@ -28,15 +29,11 @@ function satPosition(
 }
 
 export function tickSimulation(prev: SimState): Partial<SimState> {
-  // Advance angles (raan + inclination are orbital constants, unchanged)
-  const nextSatellites = prev.satellites.map((sat) => ({
-    ...sat,
-    angle: sat.angle + sat.angularVelocity * prev.config.timeScale,
-  }));
+  // Angles are NOT advanced here — the visual useFrame loop handles smooth
+  // 60fps angle updates. The tick only handles collisions, metrics, and debris.
   const nextDebris = prev.debris
     .map((frag) => ({
       ...frag,
-      angle: frag.angle + frag.angularVelocity * prev.config.timeScale,
       lifetime: frag.lifetime - 1,
     }))
     .filter((frag) => frag.lifetime > 0);
@@ -44,17 +41,18 @@ export function tickSimulation(prev: SimState): Partial<SimState> {
   const newEvents: SimEvent[] = [];
   const newEffects: CollisionEffect[] = [];
   let collisionsThisTick = 0;
+  const victimIds = new Set<string>();
 
   for (const band of prev.bands.map((b) => ({ ...b }))) {
     band.debrisCount = nextDebris.filter((d) => d.bandId === band.id).length;
-    band.satelliteCount = nextSatellites.filter(
+    band.satelliteCount = prev.satellites.filter(
       (s) => s.bandId === band.id && s.active
     ).length;
     band.risk = computeBandRisk(band, prev.config);
 
     if (shouldTriggerCollision(band.risk)) {
       collisionsThisTick += 1;
-      const victims = nextSatellites
+      const victims = prev.satellites
         .filter((s) => s.bandId === band.id && s.active)
         .slice(0, 2);
 
@@ -68,17 +66,18 @@ export function tickSimulation(prev: SimState): Partial<SimState> {
         });
       }
 
-      victims.forEach((sat) => { sat.active = false; });
+      victims.forEach((sat) => { victimIds.add(sat.id); });
 
       // Debris inherits the victim's inclination region ± spread, random RAAN
       const victimInc = victims[0]?.inclination ?? band.inclination;
+      const baseOmega = orbitalAngularVelocity(band.altitudeKm);
       const fragments: DebrisFragment[] = Array.from(
         { length: prev.config.debrisPerCollision },
         (_, i) => ({
           id: id(`debris-${band.id}-${i}`),
           bandId: band.id,
           angle: Math.random() * Math.PI * 2,
-          angularVelocity: 0.004 + Math.random() * 0.008,
+          angularVelocity: baseOmega * (1.0 + Math.random() * 0.3),
           lifetime: 500,
           raan: Math.random() * Math.PI * 2,
           inclination: victimInc + (Math.random() - 0.5) * 30,
@@ -93,6 +92,12 @@ export function tickSimulation(prev: SimState): Partial<SimState> {
       });
     }
   }
+
+  // Only create a new satellites array if a collision deactivated some —
+  // avoids triggering React re-renders on every tick
+  const nextSatellites = victimIds.size > 0
+    ? prev.satellites.map((s) => victimIds.has(s.id) ? { ...s, active: false } : s)
+    : prev.satellites;
 
   const nextBands = prev.bands.map((band) => {
     const b = { ...band };

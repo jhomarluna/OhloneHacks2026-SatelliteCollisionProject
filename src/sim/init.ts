@@ -22,20 +22,30 @@ function makeBands(config: SimConfig): OrbitBand[] {
   }));
 }
 
+// Compute real orbital angular velocity (rad/s) from altitude
+export function orbitalAngularVelocity(altKm: number): number {
+  const GM = 3.986004418e14; // m³/s²
+  const R = (6371 + altKm) * 1000; // meters
+  const period = 2 * Math.PI * Math.sqrt((R * R * R) / GM); // seconds
+  return (2 * Math.PI) / period; // rad/s
+}
+
 function makeSatellites(bands: OrbitBand[]): Satellite[] {
-  return bands.flatMap((band) =>
-    Array.from({ length: band.satelliteCount }, (_, i) => ({
+  return bands.flatMap((band) => {
+    const baseOmega = orbitalAngularVelocity(band.altitudeKm);
+    return Array.from({ length: band.satelliteCount }, (_, i) => ({
       id: `${band.id}-sat-${i}`,
       bandId: band.id,
       angle: Math.random() * Math.PI * 2,
-      angularVelocity: 0.002 + Math.random() * 0.004,
+      // Realistic angular velocity with ±2% variation
+      angularVelocity: baseOmega * (0.98 + Math.random() * 0.04),
       active: true,
       // Fully random RAAN — each satellite gets an independent orbital plane
       raan: Math.random() * Math.PI * 2,
       // Wider spread around the band's characteristic inclination for fuller sphere
       inclination: band.inclination + (Math.random() - 0.5) * 20,
-    }))
-  );
+    }));
+  });
 }
 
 export function createInitialState(config: SimConfig): SimState {

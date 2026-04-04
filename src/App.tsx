@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { ControlPanel } from "./components/ControlPanel";
 import { EventLog } from "./components/EventLog";
 import { SatelliteInfo } from "./components/SatelliteInfo";
+import { SimSatelliteInfo } from "./components/SimSatelliteInfo";
 import { StatsPanel } from "./components/StatsPanel";
 import { TimelineChart } from "./components/TimelineChart";
 import { SceneRoot } from "./scene/SceneRoot";
@@ -31,6 +32,7 @@ export default function App() {
           <SceneRoot />
           {/* Satellite info floats over the 3D viewport */}
           <SatelliteInfo />
+          <SimSatelliteInfo />
         </section>
         <aside className="sidebar">
           <ControlPanel />

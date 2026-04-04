@@ -91,11 +91,32 @@ function gpToRealSatellite(gp: CelesTrakGP): RealSatellite | null {
   };
 }
 
+/** Fetch the total number of tracked objects in orbit from the TLE API */
+export async function fetchLEOCount(): Promise<number> {
+  const FALLBACK_COUNT = 10000;
+  try {
+    const res = await fetch(
+      'https://tle.ivanstanojevic.me/api/tle?page_size=1',
+      { signal: AbortSignal.timeout(10000) }
+    );
+    if (!res.ok) return FALLBACK_COUNT;
+    const data = await res.json();
+    const total = data?.totalItems;
+    if (typeof total !== 'number' || total <= 0) return FALLBACK_COUNT;
+
+    console.info(`[TLE API] Tracked objects in orbit: ${total}`);
+    return total;
+  } catch {
+    console.warn('[TLE API] Failed to fetch satellite count — using fallback');
+    return FALLBACK_COUNT;
+  }
+}
+
 export async function fetchLEOSatellites(): Promise<RealSatellite[]> {
   // CelesTrak GP JSON API — "visual" group has ~150 observable LEO satellites
   const urls = [
-    'https://celestrak.org/SOCRATES/query.php?GROUP=visual&FORMAT=json',
-    'https://celestrak.org/SOCRATES/query.php?GROUP=stations&FORMAT=json',
+    '/celestrak/SOCRATES/query.php?GROUP=visual&FORMAT=json',
+    '/celestrak/SOCRATES/query.php?GROUP=stations&FORMAT=json',
   ];
 
   for (const url of urls) {

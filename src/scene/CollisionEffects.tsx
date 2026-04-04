@@ -3,8 +3,8 @@ import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useSimStore } from '../store/simStore'
 
-const PARTICLE_COUNT = 24
-const EFFECT_DURATION = 1.8 // seconds
+const PARTICLE_COUNT = 12
+const EFFECT_DURATION = 1.0 // seconds
 
 interface Burst {
   id: string
@@ -31,7 +31,7 @@ export function CollisionEffects() {
             (Math.random() - 0.5) * 2,
             (Math.random() - 0.5) * 2,
             (Math.random() - 0.5) * 2,
-          ).normalize().multiplyScalar(0.3 + Math.random() * 0.7)
+          ).normalize().multiplyScalar(0.15 + Math.random() * 0.25)
         })
         burstsRef.current.push({
           id: effect.id,
@@ -59,7 +59,7 @@ export function CollisionEffects() {
   )
 }
 
-function BurstRenderer({ burstsRef }: { burstsRef: React.RefObject<Burst[]> }) {
+function BurstRenderer({ burstsRef }: { burstsRef: React.MutableRefObject<Burst[]> }) {
   const groupRef = useRef<THREE.Group>(null)
   const meshRefs = useRef<Map<string, THREE.InstancedMesh>>(new Map())
 
@@ -92,7 +92,7 @@ function BurstRenderer({ burstsRef }: { burstsRef: React.RefObject<Burst[]> }) {
       let mesh = meshRefs.current.get(burst.id)
 
       if (!mesh) {
-        const geo = new THREE.SphereGeometry(0.02, 6, 6)
+        const geo = new THREE.SphereGeometry(0.008, 4, 4)
         const mat = new THREE.MeshBasicMaterial({ toneMapped: false })
         mesh = new THREE.InstancedMesh(geo, mat, PARTICLE_COUNT + 1)
         meshRefs.current.set(burst.id, mesh)
@@ -103,7 +103,7 @@ function BurstRenderer({ burstsRef }: { burstsRef: React.RefObject<Burst[]> }) {
       const progress = t / EFFECT_DURATION
 
       // Central flash (first instance)
-      const flashScale = Math.max(0, 1 - progress * 2) * 6
+      const flashScale = Math.max(0, 1 - progress * 3) * 2.5
       dummy.position.copy(burst.origin)
       dummy.scale.setScalar(flashScale)
       dummy.updateMatrix()
@@ -116,10 +116,10 @@ function BurstRenderer({ burstsRef }: { burstsRef: React.RefObject<Burst[]> }) {
         const dir = burst.directions[i]
         const pos = burst.origin
           .clone()
-          .add(dir.clone().multiplyScalar(t * 1.5))
+          .add(dir.clone().multiplyScalar(t * 0.5))
 
         const fadeOut = Math.max(0, 1 - progress)
-        const particleScale = fadeOut * (0.5 + Math.random() * 0.1)
+        const particleScale = fadeOut * 0.4
 
         dummy.position.copy(pos)
         dummy.scale.setScalar(particleScale)

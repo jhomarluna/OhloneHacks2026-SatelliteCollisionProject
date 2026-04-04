@@ -51,8 +51,9 @@ export function ControlPanel() {
         Time Scale: {config.timeScale}×
         <input
           type="range"
-          min={1}
-          max={50}
+          min={0.5}
+          max={200}
+          step={0.5}
           value={config.timeScale}
           onChange={(e) => setConfig({ timeScale: Number(e.target.value) })}
         />
