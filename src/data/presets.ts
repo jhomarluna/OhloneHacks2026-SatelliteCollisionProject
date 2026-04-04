@@ -1,6 +1,6 @@
 import type { SimConfig } from "../types/sim";
 export const defaultConfig: SimConfig = {
-  timeScale: 10,
+  timeScale: 50,
   collisionThreshold: 0.35,
   debrisPerCollision: 18,
   debrisSpreadChance: 0.15,

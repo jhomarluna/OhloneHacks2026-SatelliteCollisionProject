@@ -7,6 +7,22 @@ import type { RealSatellite } from '../types/sim'
 
 const MAX_REAL = 500
 
+function createCircleTexture(): THREE.Texture {
+  const size = 64
+  const canvas = document.createElement('canvas')
+  canvas.width = size
+  canvas.height = size
+  const ctx = canvas.getContext('2d')!
+  ctx.beginPath()
+  ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2)
+  ctx.fillStyle = '#ffffff'
+  ctx.fill()
+  const tex = new THREE.CanvasTexture(canvas)
+  tex.needsUpdate = true
+  return tex
+}
+const circleTexture = createCircleTexture()
+
 function RealSatPoints({ sats, selectedSatId, timeScale }: {
   sats: RealSatellite[]
   selectedSatId: string | null
@@ -17,23 +33,32 @@ function RealSatPoints({ sats, selectedSatId, timeScale }: {
     const attr = new THREE.BufferAttribute(arr, 3)
     const geo  = new THREE.BufferGeometry()
     geo.setAttribute('position', attr)
+    geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 100)
     geo.setDrawRange(0, 0)
     const mat = new THREE.PointsMaterial({
       size: 0.028,
       color: '#ffffff',
       sizeAttenuation: true,
       toneMapped: false,
+      map: circleTexture,
+      alphaTest: 0.5,
+      transparent: true,
     })
     const pts = new THREE.Points(geo, mat)
     pts.frustumCulled = false
     return { points: pts, posAttr: attr }
   }, [])
 
-  useFrame(() => {
+  useFrame((state) => {
     const pos   = posAttr.array as Float32Array
     const now   = Date.now()
     const count = Math.min(sats.length, MAX_REAL)
     let drawn   = 0
+
+    // Keep dots visually the same size regardless of zoom
+    const dist = state.camera.position.length()
+    const mat = points.material as THREE.PointsMaterial
+    mat.size = 0.028 * (dist / 13)
 
     for (let i = 0; i < count; i++) {
       const sat = sats[i]

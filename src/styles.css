@@ -26,28 +26,29 @@ body, html, #root {
 }
 .layout {
   display: grid;
-  grid-template-columns: 1.7fr 1fr;
-  gap: 16px;
+  grid-template-columns: 1fr 260px;
+  gap: 12px;
+  height: calc(100vh - 80px);
 }
 .viewport-panel {
-  min-height: 80vh;
   border: 1px solid #1e293b;
   border-radius: 16px;
   overflow: hidden;
-  background: radial-gradient(circle at top, #0f172a, #020617 70%);
+  background: radial-gradient(circle at center, #0f172a, #020617 70%);
   position: relative;
 }
 .sidebar {
   display: grid;
-  gap: 16px;
+  gap: 10px;
   align-content: start;
+  overflow-y: auto;
 }
 
 .panel {
   border: 1px solid #1e293b;
   border-radius: 16px;
-  padding: 16px;
-  background: rgba(15, 23, 42, 0.9);
+  padding: 14px;
+  background: rgba(15, 23, 42, 0.95);
 }
 .row {
   display: flex;
@@ -219,6 +220,166 @@ button:hover {
   font-variant-numeric: tabular-nums;
 }
 
+/* Sim satellite variant */
+.sat-info-panel.sim {
+  border-color: #ff8c00;
+  box-shadow: 0 0 20px rgba(255, 140, 0, 0.15);
+}
+.sat-info-panel.sim .sat-info-header h3 {
+  color: #ff8c00;
+}
+.sat-info-dot.sim {
+  background: #ff8c00;
+  box-shadow: 0 0 6px #ff8c00;
+}
+
+/* ── Sim multi-select list panel ──────────────────────────────────────────── */
+.sim-select-panel {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 10;
+  background: rgba(5, 10, 25, 0.92);
+  border: 1px solid #ff8c00;
+  border-radius: 12px;
+  padding: 10px 12px;
+  min-width: 220px;
+  max-width: 280px;
+  max-height: 50vh;
+  display: flex;
+  flex-direction: column;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 0 16px rgba(255, 140, 0, 0.12);
+}
+.sim-select-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  gap: 8px;
+}
+.sim-select-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #ff8c00;
+}
+.sim-select-clear {
+  flex-shrink: 0;
+  width: auto;
+  padding: 2px 8px;
+  font-size: 0.72rem;
+  border-radius: 6px;
+  border: 1px solid #475569;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.sim-select-clear:hover {
+  color: #f87171;
+  border-color: #f87171;
+  background: rgba(248, 113, 113, 0.08);
+}
+
+.sim-select-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+  max-height: 36vh;
+}
+.sim-select-item {
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  transition: background 0.12s;
+}
+.sim-select-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+.sim-select-item-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+}
+.sim-select-info-btn {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  font-size: 0.68rem;
+  font-weight: 700;
+  font-style: italic;
+  border-radius: 50%;
+  border: 1px solid #475569;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.12s;
+}
+.sim-select-info-btn:hover {
+  border-color: #ff8c00;
+  color: #ff8c00;
+  background: rgba(255, 140, 0, 0.08);
+}
+.sim-select-item-name {
+  flex: 1;
+  font-size: 0.78rem;
+  color: #e2e8f0;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sim-select-remove {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  font-size: 0.9rem;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.12s;
+}
+.sim-select-remove:hover {
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.12);
+}
+
+/* Expanded detail section */
+.sim-select-detail {
+  padding: 4px 6px 8px 30px;
+}
+.sim-detail-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 10px;
+  font-size: 0.72rem;
+}
+.sim-detail-grid span:nth-child(odd) {
+  color: #64748b;
+}
+.sim-detail-grid span:nth-child(even) {
+  color: #cbd5e1;
+  font-variant-numeric: tabular-nums;
+}
+
+.sim-select-hint {
+  margin: 6px 0 0;
+  font-size: 0.68rem;
+  color: #64748b;
+  text-align: center;
+}
+
 /* ── Status / hint text ────────────────────────────────────────────────────── */
 .celestrak-status {
   margin: 10px 0 0;
@@ -250,9 +411,11 @@ button:hover {
   min-height: 280px;
 }
 
-@media (max-width: 1100px) {
-  .layout {
-    grid-template-columns: 1fr;
+@media (max-width: 768px) {
+  .sidebar {
+    position: static;
+    width: 100%;
+    max-height: none;
   }
   .viewport-panel {
     min-height: 55vh;
