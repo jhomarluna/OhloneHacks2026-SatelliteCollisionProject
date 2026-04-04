@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "kessler-dev",
+      "runtimeExecutable": "/bin/sh",
+      "runtimeArgs": ["-c", "cd /Users/jhomarluna/Desktop/kessler-simulator/.claude/worktrees/keen-keller && export PATH=/usr/local/bin:/Users/jhomarluna/.nvm/versions/node/v24.12.0/bin:$PATH && npm run dev"],
+      "port": 5173
+    }
+  ]
+}

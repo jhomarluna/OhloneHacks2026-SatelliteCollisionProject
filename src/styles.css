@@ -1,98 +1,215 @@
 :root {
-font-family: Inter, system-ui, sans-serif;
-color: #e5e7eb;
-
-background: #020617;
+  font-family: Inter, system-ui, sans-serif;
+  color: #e5e7eb;
+  background: #020617;
 }
 * {
-box-sizing: border-box;
+  box-sizing: border-box;
 }
 body, html, #root {
-margin: 0;
-width: 100%;
-min-height: 100%;
-background: #020617;
+  margin: 0;
+  width: 100%;
+  min-height: 100%;
+  background: #020617;
 }
 .app-shell {
-min-height: 100vh;
-padding: 16px;
+  min-height: 100vh;
+  padding: 16px;
 }
 .topbar {
-margin-bottom: 16px;
+  margin-bottom: 16px;
 }
 .topbar h1,
 .panel h2,
 .topbar p {
-margin: 0;
+  margin: 0;
 }
 .layout {
-display: grid;
-grid-template-columns: 1.7fr 1fr;
-gap: 16px;
+  display: grid;
+  grid-template-columns: 1.7fr 1fr;
+  gap: 16px;
 }
 .viewport-panel {
-min-height: 80vh;
-border: 1px solid #1e293b;
-border-radius: 16px;
-overflow: hidden;
-background: radial-gradient(circle at top, #0f172a, #020617 70%);
+  min-height: 80vh;
+  border: 1px solid #1e293b;
+  border-radius: 16px;
+  overflow: hidden;
+  background: radial-gradient(circle at top, #0f172a, #020617 70%);
+  position: relative;
 }
 .sidebar {
-display: grid;
-gap: 16px;
-align-content: start;
+  display: grid;
+  gap: 16px;
+  align-content: start;
 }
 
 .panel {
-border: 1px solid #1e293b;
-border-radius: 16px;
-padding: 16px;
-background: rgba(15, 23, 42, 0.9);
+  border: 1px solid #1e293b;
+  border-radius: 16px;
+  padding: 16px;
+  background: rgba(15, 23, 42, 0.9);
 }
 .row {
-display: flex;
+  display: flex;
 }
 .gap {
-gap: 8px;
+  gap: 8px;
 }
 label {
-display: grid;
-gap: 6px;
-margin-top: 12px;
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
 }
 button,
 input {
-width: 100%;
+  width: 100%;
 }
 button {
-padding: 10px 12px;
-border-radius: 10px;
-border: 1px solid #334155;
-background: #111827;
-color: #e5e7eb;
-cursor: pointer;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #334155;
+  background: #111827;
+  color: #e5e7eb;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
 }
+button:hover {
+  background: #1e293b;
+  border-color: #475569;
+}
+
+/* Warn / destructive button */
+.btn-warn {
+  border-color: #b45309 !important;
+  background: #1c1007 !important;
+  color: #fbbf24 !important;
+}
+.btn-warn:hover {
+  background: #2d1f0a !important;
+}
+
+/* Satellite explode button */
+.btn-explode {
+  width: 100%;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #991b1b;
+  background: #1c0606;
+  color: #fca5a5;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 600;
+  transition: background 0.15s;
+}
+.btn-explode:hover {
+  background: #2d0a0a;
+}
+
+/* ── Satellite Info overlay panel ─────────────────────────────────────────── */
+.sat-info-panel {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  z-index: 10;
+  background: rgba(5, 10, 25, 0.92);
+  border: 1px solid #22d3ee;
+  border-radius: 14px;
+  padding: 14px 16px;
+  min-width: 240px;
+  max-width: 300px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 0 20px rgba(34, 211, 238, 0.15);
+}
+
+.sat-info-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.sat-info-header h3 {
+  margin: 0;
+  flex: 1;
+  font-size: 0.95rem;
+  color: #ffd700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sat-info-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ffd700;
+  box-shadow: 0 0 6px #ffd700;
+  flex-shrink: 0;
+}
+.sat-info-close {
+  flex-shrink: 0;
+  width: auto;
+  padding: 2px 8px;
+  font-size: 0.8rem;
+  border-color: #334155;
+  background: transparent;
+  color: #94a3b8;
+}
+.sat-info-close:hover {
+  color: #e5e7eb;
+  background: #1e293b;
+}
+
+.sat-info-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  font-size: 0.82rem;
+  color: #cbd5e1;
+}
+.sat-info-grid span:nth-child(odd) {
+  color: #64748b;
+}
+.sat-info-grid span:nth-child(even) {
+  color: #e2e8f0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Status / hint text ────────────────────────────────────────────────────── */
+.celestrak-status {
+  margin: 10px 0 0;
+  font-size: 0.75rem;
+  color: #64748b;
+}
+.hint {
+  margin: 4px 0 0;
+  font-size: 0.75rem;
+  color: #ffd700;
+  opacity: 0.7;
+}
+
+/* ── Event log ─────────────────────────────────────────────────────────────── */
 .event-log {
-display: grid;
-gap: 8px;
-max-height: 220px;
-overflow: auto;
+  display: grid;
+  gap: 8px;
+  max-height: 220px;
+  overflow: auto;
 }
 .event-item {
-display: grid;
-gap: 4px;
-padding-bottom: 8px;
-border-bottom: 1px solid #1e293b;
+  display: grid;
+  gap: 4px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #1e293b;
+}
 
-}
 .chart-panel {
-min-height: 280px;
+  min-height: 280px;
 }
+
 @media (max-width: 1100px) {
-.layout {
-grid-template-columns: 1fr;
-}
-.viewport-panel {
-min-height: 55vh;
-}
+  .layout {
+    grid-template-columns: 1fr;
+  }
+  .viewport-panel {
+    min-height: 55vh;
+  }
 }

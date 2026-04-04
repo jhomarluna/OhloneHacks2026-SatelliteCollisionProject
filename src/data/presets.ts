@@ -5,12 +5,12 @@ export const defaultConfig: SimConfig = {
   debrisPerCollision: 18,
   debrisSpreadChance: 0.15,
   cleanupRate: 0.01,
-  bandCount: 4,
-  satellitesPerBand: 30,
+  bandCount: 8,
+  satellitesPerBand: 150, // dense swarm across 8 shells
 };
 export const denseOrbitConfig: SimConfig = {
   ...defaultConfig,
-  satellitesPerBand: 55,
+  satellitesPerBand: 180,
   collisionThreshold: 0.32,
 };
 export const cascadeStartConfig: SimConfig = {
