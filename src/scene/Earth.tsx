@@ -2,9 +2,11 @@ import { useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 
+// Earth scene radius — must match EARTH_SCENE_RADIUS in celestrakService.ts
+const R = 2.5
+
 export function Earth() {
   const wireRef = useRef<THREE.Group>(null)
-  const glowRef = useRef<THREE.Mesh>(null)
 
   useFrame((_, delta) => {
     if (wireRef.current) {
@@ -16,7 +18,7 @@ export function Earth() {
     <group>
       {/* Core dark sphere */}
       <mesh>
-        <sphereGeometry args={[1.18, 48, 48]} />
+        <sphereGeometry args={[R * 0.984, 48, 48]} />
         <meshBasicMaterial color="#020a18" transparent opacity={0.95} />
       </mesh>
 
@@ -24,7 +26,7 @@ export function Earth() {
       <group ref={wireRef}>
         {/* Primary wireframe */}
         <mesh>
-          <sphereGeometry args={[1.2, 36, 24]} />
+          <sphereGeometry args={[R, 36, 24]} />
           <meshBasicMaterial
             color="#22d3ee"
             wireframe
@@ -35,7 +37,7 @@ export function Earth() {
 
         {/* Denser wireframe for equatorial detail */}
         <mesh>
-          <sphereGeometry args={[1.201, 64, 8]} />
+          <sphereGeometry args={[R * 1.0008, 64, 8]} />
           <meshBasicMaterial
             color="#06b6d4"
             wireframe
@@ -44,12 +46,12 @@ export function Earth() {
           />
         </mesh>
 
-        {/* Latitude lines - horizontal rings */}
+        {/* Latitude rings */}
         {[-0.6, -0.3, 0, 0.3, 0.6].map((y) => {
-          const r = Math.sqrt(1 - y * y) * 1.205
+          const r = Math.sqrt(1 - y * y) * R * 1.004
           return (
-            <mesh key={y} position={[0, y * 1.205, 0]} rotation={[Math.PI / 2, 0, 0]}>
-              <ringGeometry args={[r - 0.002, r, 128]} />
+            <mesh key={y} position={[0, y * R * 1.004, 0]} rotation={[Math.PI / 2, 0, 0]}>
+              <ringGeometry args={[r - 0.004, r, 128]} />
               <meshBasicMaterial
                 color="#22d3ee"
                 transparent
@@ -62,8 +64,8 @@ export function Earth() {
       </group>
 
       {/* Atmosphere glow - inner */}
-      <mesh ref={glowRef}>
-        <sphereGeometry args={[1.28, 48, 48]} />
+      <mesh>
+        <sphereGeometry args={[R * 1.067, 48, 48]} />
         <meshBasicMaterial
           color="#0891b2"
           transparent
@@ -74,7 +76,7 @@ export function Earth() {
 
       {/* Atmosphere glow - outer */}
       <mesh>
-        <sphereGeometry args={[1.45, 48, 48]} />
+        <sphereGeometry args={[R * 1.21, 48, 48]} />
         <meshBasicMaterial
           color="#06b6d4"
           transparent

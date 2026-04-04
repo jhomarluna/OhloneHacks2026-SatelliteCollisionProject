@@ -3,14 +3,22 @@ import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useSimStore } from '../store/simStore'
 
-const lowRiskColor = new THREE.Color('#334155')
-const midRiskColor = new THREE.Color('#f59e0b')
-const highRiskColor = new THREE.Color('#ef4444')
+const DEG2RAD = Math.PI / 180
 
-function lerpColor(risk: number): THREE.Color {
-  if (risk < 0.3) return lowRiskColor.clone().lerp(midRiskColor, risk / 0.3)
-  return midRiskColor.clone().lerp(highRiskColor, (risk - 0.3) / 0.7)
+// Risk-based color: grey → orange → red  (same as before, very faint)
+function riskColor(risk: number, out: THREE.Color): void {
+  if (risk < 0.3) {
+    out.setRGB(0.2, 0.25, 0.32) // dark blue-grey
+  } else if (risk < 0.7) {
+    const t = (risk - 0.3) / 0.4
+    out.setRGB(0.2 + t * 0.79, 0.25 + t * 0.37, 0.32 - t * 0.32)
+  } else {
+    const t = (risk - 0.7) / 0.3
+    out.setRGB(0.99, 0.62 - t * 0.37, 0.0)
+  }
 }
+
+const tempColor = new THREE.Color()
 
 export function OrbitShells() {
   const bands = useSimStore((s) => s.bands)
@@ -22,14 +30,14 @@ export function OrbitShells() {
     groupRef.current.children.forEach((child, i) => {
       const band = bands[i]
       if (!band) return
-      // Gentle pulsing opacity for high-risk bands
       const mesh = child as THREE.Mesh
       const mat = mesh.material as THREE.MeshBasicMaterial
-      const color = lerpColor(band.risk)
-      mat.color.copy(color)
-      const baseOpacity = 0.15 + band.risk * 0.5
+      riskColor(band.risk, tempColor)
+      mat.color.copy(tempColor)
+      // Very subtle pulsing only at high risk
+      const baseOpacity = 0.06 + band.risk * 0.14
       mat.opacity = band.risk > 0.5
-        ? baseOpacity + Math.sin(t * 3 + i) * 0.15
+        ? baseOpacity + Math.sin(t * 3 + i) * 0.04
         : baseOpacity
     })
   })
@@ -39,13 +47,14 @@ export function OrbitShells() {
       {bands.map((band) => (
         <mesh
           key={band.id}
-          rotation={[Math.PI / 2 + band.inclination, 0, 0]}
+          // Tilt torus to the band's characteristic inclination
+          rotation={[Math.PI / 2 + band.inclination * DEG2RAD, 0, 0]}
         >
-          <torusGeometry args={[band.radius, 0.008, 8, 180]} />
+          <torusGeometry args={[band.radius, 0.005, 6, 160]} />
           <meshBasicMaterial
             color="#334155"
             transparent
-            opacity={0.15}
+            opacity={0.06}
           />
         </mesh>
       ))}

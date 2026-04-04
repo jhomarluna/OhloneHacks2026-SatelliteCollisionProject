@@ -3,83 +3,85 @@ import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useSimStore } from '../store/simStore'
 
-const dummy = new THREE.Object3D()
-const SAT_COLOR = new THREE.Color('#a5f3fc')
+const DEG2RAD = Math.PI / 180
+const MAX_SATS = 5000
 
 export function Satellites() {
-  const meshRef = useRef<THREE.InstancedMesh>(null)
   const satellites = useSimStore((s) => s.satellites)
-  const bands = useSimStore((s) => s.bands)
-  const running = useSimStore((s) => s.running)
-  const timeScale = useSimStore((s) => s.config.timeScale)
+  const bands      = useSimStore((s) => s.bands)
+  const running    = useSimStore((s) => s.running)
+  const timeScale  = useSimStore((s) => s.config.timeScale)
 
-  const bandMap = useMemo(() => {
-    return Object.fromEntries(bands.map((b) => [b.id, b]))
-  }, [bands])
+  const bandMap = useMemo(
+    () => new Map(bands.map((b) => [b.id, b])),
+    [bands]
+  )
 
-  const activeSatellites = useMemo(() => {
-    return satellites.filter((sat) => sat.active)
-  }, [satellites])
+  const activeSats = useMemo(
+    () => satellites.filter((s) => s.active),
+    [satellites]
+  )
 
-  // Local angle refs for smooth interpolation
-  const anglesRef = useRef<Float32Array>(new Float32Array(0))
+  const { points, posAttr } = useMemo(() => {
+    const arr  = new Float32Array(MAX_SATS * 3)
+    const attr = new THREE.BufferAttribute(arr, 3)
+    const geo  = new THREE.BufferGeometry()
+    geo.setAttribute('position', attr)
+    geo.setDrawRange(0, 0)
+    const mat = new THREE.PointsMaterial({
+      size: 0.025,
+      color: '#ffffff',
+      sizeAttenuation: true,
+      toneMapped: false,
+    })
+    const pts = new THREE.Points(geo, mat)
+    pts.frustumCulled = false
+    return { points: pts, posAttr: attr }
+  }, [])
+
+  const anglesRef = useRef(new Float32Array(MAX_SATS))
 
   useEffect(() => {
-    const arr = new Float32Array(activeSatellites.length)
-    for (let i = 0; i < activeSatellites.length; i++) {
-      arr[i] = activeSatellites[i].angle
+    const arr = anglesRef.current
+    for (let i = 0; i < activeSats.length && i < MAX_SATS; i++) {
+      arr[i] = activeSats[i].angle
     }
-    anglesRef.current = arr
-  }, [activeSatellites.length])
-
-  // Sync angles from sim state when tick updates
-  useEffect(() => {
-    const angles = anglesRef.current
-    for (let i = 0; i < activeSatellites.length && i < angles.length; i++) {
-      angles[i] = activeSatellites[i].angle
-    }
-  }, [activeSatellites])
+  }, [activeSats])
 
   useFrame((_, delta) => {
-    const mesh = meshRef.current
-    if (!mesh) return
-
+    const pos    = posAttr.array as Float32Array
     const angles = anglesRef.current
+    const count  = Math.min(activeSats.length, MAX_SATS)
 
-    for (let i = 0; i < activeSatellites.length; i++) {
-      const sat = activeSatellites[i]
-      const band = bandMap[sat.bandId]
+    for (let i = 0; i < count; i++) {
+      const sat  = activeSats[i]
+      const band = bandMap.get(sat.bandId)
       if (!band) continue
 
-      // Smooth angle advancement
-      if (running) {
-        angles[i] += sat.angularVelocity * timeScale * delta * 5
-      }
+      if (running) angles[i] += sat.angularVelocity * timeScale * delta * 5
 
-      const r = band.radius
-      const inc = band.inclination
       const angle = angles[i]
+      const raan  = sat.raan
+      const inc   = sat.inclination * DEG2RAD
+      const r     = band.radius
 
-      const x = Math.cos(angle) * r
-      const y = Math.sin(inc) * Math.sin(angle) * r
-      const z = Math.sin(angle) * Math.cos(inc) * r
+      const cosR = Math.cos(raan), sinR = Math.sin(raan)
+      const cosA = Math.cos(angle), sinA = Math.sin(angle)
+      const cosI = Math.cos(inc),   sinI = Math.sin(inc)
 
-      dummy.position.set(x, y, z)
-      dummy.scale.setScalar(1)
-      dummy.updateMatrix()
-      mesh.setMatrixAt(i, dummy.matrix)
+      const x     = r * (cosR * cosA - sinR * sinA * cosI)
+      const y_eci = r * (sinR * cosA + cosR * sinA * cosI)
+      const z_eci = r * sinA * sinI
+
+      const j = i * 3
+      pos[j]     = x
+      pos[j + 1] = z_eci
+      pos[j + 2] = -y_eci
     }
 
-    mesh.instanceMatrix.needsUpdate = true
-    mesh.count = activeSatellites.length
+    posAttr.needsUpdate = true
+    points.geometry.setDrawRange(0, count)
   })
 
-  const maxCount = Math.max(activeSatellites.length, 1)
-
-  return (
-    <instancedMesh ref={meshRef} args={[undefined, undefined, maxCount]}>
-      <sphereGeometry args={[0.025, 8, 8]} />
-      <meshBasicMaterial color={SAT_COLOR} />
-    </instancedMesh>
-  )
+  return <primitive object={points} />
 }
