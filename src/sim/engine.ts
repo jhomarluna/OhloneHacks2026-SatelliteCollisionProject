@@ -1,4 +1,9 @@
-import { computeBandRisk, shouldTriggerCollision } from "./collision";
+import {
+  computeBandRisk,
+  computeDebrisSatelliteRisk,
+  computeDebrisDebrisRisk,
+  shouldTriggerCollision,
+} from "./collision";
 import type {
   CollisionEffect,
   DebrisFragment,
@@ -8,12 +13,13 @@ import type {
 } from "../types/sim";
 
 const DEG2RAD = Math.PI / 180;
+// Debris persists for a very long time — it accumulates and drives cascade
+const DEBRIS_LIFETIME = 12000;
 
 function id(prefix: string) {
   return `${prefix}-${crypto.randomUUID()}`;
 }
 
-/** Compute 3D ECI → Three.js position from individual orbital elements */
 function satPosition(
   angle: number,
   raan: number,
@@ -27,12 +33,29 @@ function satPosition(
   return [x, z_eci, -y_eci];
 }
 
+function makeDebris(
+  count: number,
+  bandId: string,
+  baseInclination: number,
+  spread: number
+): DebrisFragment[] {
+  return Array.from({ length: count }, (_, i) => ({
+    id: id(`debris-${bandId}-${i}`),
+    bandId,
+    angle: Math.random() * Math.PI * 2,
+    angularVelocity: 0.004 + Math.random() * 0.008,
+    lifetime: DEBRIS_LIFETIME,
+    raan: Math.random() * Math.PI * 2,
+    inclination: baseInclination + (Math.random() - 0.5) * spread,
+  }));
+}
+
 export function tickSimulation(prev: SimState): Partial<SimState> {
-  // Advance angles (raan + inclination are orbital constants, unchanged)
   const nextSatellites = prev.satellites.map((sat) => ({
     ...sat,
     angle: sat.angle + sat.angularVelocity * prev.config.timeScale,
   }));
+
   const nextDebris = prev.debris
     .map((frag) => ({
       ...frag,
@@ -45,52 +68,64 @@ export function tickSimulation(prev: SimState): Partial<SimState> {
   const newEffects: CollisionEffect[] = [];
   let collisionsThisTick = 0;
 
-  for (const band of prev.bands.map((b) => ({ ...b }))) {
-    band.debrisCount = nextDebris.filter((d) => d.bandId === band.id).length;
-    band.satelliteCount = nextSatellites.filter(
-      (s) => s.bandId === band.id && s.active
-    ).length;
-    band.risk = computeBandRisk(band, prev.config);
+  for (const band of prev.bands) {
+    const bandDebrisCount = nextDebris.filter((d) => d.bandId === band.id).length;
+    const bandSatCount = nextSatellites.filter((s) => s.bandId === band.id && s.active).length;
 
-    if (shouldTriggerCollision(band.risk)) {
-      collisionsThisTick += 1;
+    const liveband = { ...band, debrisCount: bandDebrisCount, satelliteCount: bandSatCount };
+
+    // ── 1. Satellite–satellite collisions ─────────────────────────────────
+    if (shouldTriggerCollision(computeBandRisk(liveband, prev.config))) {
+      collisionsThisTick++;
       const victims = nextSatellites
         .filter((s) => s.bandId === band.id && s.active)
         .slice(0, 2);
 
       if (victims.length > 0) {
         const v = victims[0];
-        const [px, py, pz] = satPosition(v.angle, v.raan, v.inclination, band.radius);
-        newEffects.push({
-          id: id("fx"),
-          position: [px, py, pz],
-          createdAt: performance.now(),
+        const pos = satPosition(v.angle, v.raan, v.inclination, band.radius);
+        newEffects.push({ id: id("fx"), position: pos, createdAt: performance.now() });
+        victims.forEach((s) => { s.active = false; });
+
+        const frags = makeDebris(prev.config.debrisPerCollision, band.id, v.inclination, 30);
+        nextDebris.push(...frags);
+        newEvents.push({
+          id: id("ev"),
+          t: prev.metrics.time + 1,
+          message: `Sat–sat collision in ${band.id} → ${frags.length} fragments`,
         });
       }
+    }
 
-      victims.forEach((sat) => { sat.active = false; });
+    // ── 2. Debris–satellite collisions ────────────────────────────────────
+    if (shouldTriggerCollision(computeDebrisSatelliteRisk(liveband, prev.config))) {
+      collisionsThisTick++;
+      const activeSats = nextSatellites.filter((s) => s.bandId === band.id && s.active);
+      if (activeSats.length > 0) {
+        const victim = activeSats[Math.floor(Math.random() * activeSats.length)];
+        victim.active = false;
+        const pos = satPosition(victim.angle, victim.raan, victim.inclination, band.radius);
+        newEffects.push({ id: id("fx"), position: pos, createdAt: performance.now() });
 
-      // Debris inherits the victim's inclination region ± spread, random RAAN
-      const victimInc = victims[0]?.inclination ?? band.inclination;
-      const fragments: DebrisFragment[] = Array.from(
-        { length: prev.config.debrisPerCollision },
-        (_, i) => ({
-          id: id(`debris-${band.id}-${i}`),
-          bandId: band.id,
-          angle: Math.random() * Math.PI * 2,
-          angularVelocity: 0.004 + Math.random() * 0.008,
-          lifetime: 500,
-          raan: Math.random() * Math.PI * 2,
-          inclination: victimInc + (Math.random() - 0.5) * 30,
-        })
-      );
-      nextDebris.push(...fragments);
+        // Impact shreds the satellite into more fragments than a clean collision
+        const fragCount = Math.floor(prev.config.debrisPerCollision * 0.8);
+        const frags = makeDebris(fragCount, band.id, victim.inclination, 45);
+        nextDebris.push(...frags);
+        newEvents.push({
+          id: id("ev"),
+          t: prev.metrics.time + 1,
+          message: `Debris struck satellite in ${band.id} → ${frags.length} fragments`,
+        });
+      }
+    }
 
-      newEvents.push({
-        id: id("event"),
-        t: prev.metrics.time + 1,
-        message: `Collision in ${band.id} generated ${fragments.length} debris fragments`,
-      });
+    // ── 3. Debris–debris collisions (n² cascade) ──────────────────────────
+    if (shouldTriggerCollision(computeDebrisDebrisRisk(liveband))) {
+      // Two fragments shatter into several smaller ones — net fragment gain
+      const fragCount = 3 + Math.floor(Math.random() * 4); // 3–6 new pieces
+      const refInc = band.inclination + (Math.random() - 0.5) * 60;
+      const frags = makeDebris(fragCount, band.id, refInc, 60);
+      nextDebris.push(...frags);
     }
   }
 
@@ -118,9 +153,9 @@ export function tickSimulation(prev: SimState): Partial<SimState> {
   const history: TimelinePoint[] = [...prev.history, metrics].slice(-300);
 
   const status =
-    unusableBands >= 2 || debrisCount > 500
+    unusableBands >= 2 || debrisCount > 2000
       ? "runaway"
-      : debrisCount > 120 || totalCollisions > 3
+      : debrisCount > 300 || totalCollisions > 5
       ? "unstable"
       : "stable";
 
