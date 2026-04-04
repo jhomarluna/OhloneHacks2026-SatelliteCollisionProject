@@ -3,11 +3,14 @@ import { useSimStore } from "../store/simStore";
 export function ControlPanel() {
   const running = useSimStore((s) => s.running);
   const config = useSimStore((s) => s.config);
+  const satellites = useSimStore((s) => s.satellites);
   const setRunning = useSimStore((s) => s.setRunning);
   const setConfig = useSimStore((s) => s.setConfig);
   const reset = useSimStore((s) => s.reset);
   const addSimSatellites = useSimStore((s) => s.addSimSatellites);
   const forceCollision = useSimStore((s) => s.forceCollision);
+
+  const activeSatCount = satellites.filter((s) => s.active).length;
 
   return (
     <section className="panel">
@@ -20,20 +23,27 @@ export function ControlPanel() {
         <button onClick={reset}>Reset</button>
       </div>
 
+      {/* Satellite count context */}
+      <div className="sat-count-row">
+        <span className="sat-count-label">Active Satellites</span>
+        <span className="sat-count-value">{activeSatCount.toLocaleString()}</span>
+      </div>
+
       {/* Demo actions */}
-      <div className="row gap" style={{ marginTop: 10 }}>
+      <div className="col gap" style={{ marginTop: 6 }}>
         <button
-          onClick={() => addSimSatellites(25)}
-          title="Add 25 satellites per orbital band to increase collision risk"
+          onClick={() => addSimSatellites(63)}
+          title="Deploy ~500 satellites (simulates a Starlink batch launch)"
+          className="btn-launch"
         >
-          + Add 25 Satellites
+          🚀 Launch Satellite Batch <span className="btn-sub">(+500 sats)</span>
         </button>
         <button
           className="btn-warn"
           onClick={forceCollision}
           title="Force a collision in the most crowded band"
         >
-          Force Collision
+          💥 Force Collision
         </button>
       </div>
 

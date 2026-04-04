@@ -3,7 +3,7 @@ import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useSimStore } from '../store/simStore'
 
-const MAX_DEBRIS = 2000
+const MAX_DEBRIS = 5000
 const DEG2RAD = Math.PI / 180
 
 export function Debris() {
