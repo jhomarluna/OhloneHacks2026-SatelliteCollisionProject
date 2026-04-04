@@ -247,7 +247,46 @@ button:hover {
 }
 
 .chart-panel {
-  min-height: 280px;
+  min-height: 300px;
+}
+
+/* Timeline live counters */
+.timeline-stats {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+.tstat {
+  flex: 1;
+  background: rgba(255,255,255,0.04);
+  border-radius: 6px;
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.tstat-label {
+  font-size: 0.68rem;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.tstat-val {
+  font-size: 1rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  margin-top: 2px;
+}
+.tstat-val.sat     { color: #60a5fa; }
+.tstat-val.debris  { color: #ef4444; }
+.tstat-val.collision { color: #f97316; }
+
+.debris-warn {
+  margin-top: 6px;
+  font-size: 0.75rem;
+  color: #ef4444;
+  text-align: center;
+  opacity: 0.85;
 }
 
 @media (max-width: 1100px) {
