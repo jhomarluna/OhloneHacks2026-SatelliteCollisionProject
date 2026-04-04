@@ -1,4 +1,4 @@
-import type { OrbitBand, Satellite, SimState, SimConfig } from "../types/sim";
+import type { OrbitBand, Satellite, DebrisFragment, SimState, SimConfig } from "../types/sim";
 
 // CelesTrak GP data format (subset of fields we need)
 interface GPRecord {
@@ -6,23 +6,36 @@ interface GPRecord {
   NORAD_CAT_ID: number;
   INCLINATION: number;   // degrees
   MEAN_MOTION: number;   // revs/day
-  OBJECT_TYPE: string;
+  OBJECT_TYPE?: string;
 }
 
 const EARTH_RADIUS_KM = 6371;
 const GM = 398600.4418; // km³/s²
 
+// Satellite groups to fetch (ones that return 200)
+const SAT_GROUPS = [
+  "oneweb", "planet", "iridium-NEXT", "globalstar", "orbcomm",
+  "stations", "spire", "gps-ops", "ses", "amateur", "noaa",
+  "weather", "resource", "sarsat", "tdrss", "argos", "intelsat",
+  "science", "education", "engineering", "military", "geo",
+];
+
+// Real debris fields from historical collisions/ASAT tests
+const DEBRIS_GROUPS = [
+  "fengyun-1c-debris",     // China ASAT test 2007 (~1857 pieces)
+  "cosmos-2251-debris",    // Cosmos-Iridium collision 2009 (~579 pieces)
+  "iridium-33-debris",     // Iridium-Cosmos collision 2009 (~107 pieces)
+];
+
 /** Convert mean motion (revs/day) to altitude in km */
 function meanMotionToAltitude(n: number): number {
-  const nSec = n / 86400; // revs/sec
-  const a = Math.cbrt(GM / (4 * Math.PI * Math.PI * nSec * nSec)); // semi-major axis km
+  const nSec = n / 86400;
+  const a = Math.cbrt(GM / (4 * Math.PI * Math.PI * nSec * nSec));
   return a - EARTH_RADIUS_KM;
 }
 
 /** Map altitude in km to 3D scene radius */
 function altitudeToRadius(altKm: number): number {
-  // LEO: 200-2000km → radius 1.6-3.5
-  // Clamp to reasonable visual range
   const clamped = Math.max(200, Math.min(altKm, 2000));
   return 1.6 + ((clamped - 200) / 1800) * 1.9;
 }
@@ -33,108 +46,173 @@ const BAND_EDGES = [200, 400, 550, 700, 900, 1200, 1600, 2000];
 interface BandBucket {
   altMin: number;
   altMax: number;
-  count: number;
+  satCount: number;
+  debrisCount: number;
   inclinationSum: number;
-  satellites: { alt: number; inc: number }[];
 }
 
 export interface RealDataResult {
   totalTracked: number;
   leoCount: number;
+  debrisLoaded: number;
   bands: OrbitBand[];
   satellites: Satellite[];
+  debris: DebrisFragment[];
+}
+
+async function fetchGroup(group: string): Promise<GPRecord[]> {
+  try {
+    const res = await fetch(
+      `/api/celestrak/NORAD/elements/gp.php?GROUP=${group}&FORMAT=json`
+    );
+    if (!res.ok) return [];
+    return await res.json();
+  } catch {
+    return [];
+  }
 }
 
 export async function fetchRealSatelliteData(): Promise<RealDataResult> {
-  const res = await fetch(
-    "https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=json"
-  );
-  if (!res.ok) throw new Error(`CelesTrak fetch failed: ${res.status}`);
+  // Fetch satellite and debris groups in parallel
+  const [satResults, debrisResults] = await Promise.all([
+    Promise.all(SAT_GROUPS.map(fetchGroup)),
+    Promise.all(DEBRIS_GROUPS.map(fetchGroup)),
+  ]);
 
-  const records: GPRecord[] = await res.json();
-  const totalTracked = records.length;
+  // Deduplicate by NORAD catalog ID
+  const seen = new Set<number>();
+  const satRecords: GPRecord[] = [];
+  for (const records of satResults) {
+    for (const r of records) {
+      if (!seen.has(r.NORAD_CAT_ID)) {
+        seen.add(r.NORAD_CAT_ID);
+        satRecords.push(r);
+      }
+    }
+  }
+  const debrisRecords: GPRecord[] = [];
+  for (const records of debrisResults) {
+    for (const r of records) {
+      if (!seen.has(r.NORAD_CAT_ID)) {
+        seen.add(r.NORAD_CAT_ID);
+        debrisRecords.push(r);
+      }
+    }
+  }
 
-  // Filter to LEO only (altitude < 2000km, mean motion > ~11.25 rev/day)
-  const leoRecords = records.filter((r) => {
+  const totalTracked = satRecords.length + debrisRecords.length;
+
+  // Filter to LEO only
+  const leoSats = satRecords.filter((r) => {
+    const alt = meanMotionToAltitude(r.MEAN_MOTION);
+    return alt > 150 && alt < 2000;
+  });
+  const leoDebris = debrisRecords.filter((r) => {
     const alt = meanMotionToAltitude(r.MEAN_MOTION);
     return alt > 150 && alt < 2000;
   });
 
   // Bucket into altitude bands
-  const buckets: BandBucket[] = [];
-  for (let i = 0; i < BAND_EDGES.length - 1; i++) {
-    buckets.push({
-      altMin: BAND_EDGES[i],
-      altMax: BAND_EDGES[i + 1],
-      count: 0,
-      inclinationSum: 0,
-      satellites: [],
-    });
+  const buckets: BandBucket[] = BAND_EDGES.slice(0, -1).map((_, i) => ({
+    altMin: BAND_EDGES[i],
+    altMax: BAND_EDGES[i + 1],
+    satCount: 0,
+    debrisCount: 0,
+    inclinationSum: 0,
+  }));
+
+  function findBucket(alt: number) {
+    return buckets.find((b) => alt >= b.altMin && alt < b.altMax);
   }
 
-  for (const rec of leoRecords) {
+  for (const rec of leoSats) {
     const alt = meanMotionToAltitude(rec.MEAN_MOTION);
-    const bucket = buckets.find((b) => alt >= b.altMin && alt < b.altMax);
+    const bucket = findBucket(alt);
     if (bucket) {
-      bucket.count++;
+      bucket.satCount++;
       bucket.inclinationSum += rec.INCLINATION;
-      bucket.satellites.push({ alt, inc: rec.INCLINATION });
+    }
+  }
+  for (const rec of leoDebris) {
+    const alt = meanMotionToAltitude(rec.MEAN_MOTION);
+    const bucket = findBucket(alt);
+    if (bucket) {
+      bucket.debrisCount++;
+      bucket.inclinationSum += rec.INCLINATION;
     }
   }
 
-  // Only create bands that have satellites
-  const activeBuckets = buckets.filter((b) => b.count > 0);
+  // Only create bands that have objects
+  const activeBuckets = buckets.filter((b) => b.satCount + b.debrisCount > 0);
 
   const bands: OrbitBand[] = activeBuckets.map((b, i) => {
     const midAlt = (b.altMin + b.altMax) / 2;
-    const avgInc = b.inclinationSum / b.count;
+    const total = b.satCount + b.debrisCount;
+    const avgInc = total > 0 ? b.inclinationSum / total : 45;
     return {
       id: `band-${i + 1}`,
       altitudeKm: midAlt,
       radius: altitudeToRadius(midAlt),
-      inclination: (avgInc * Math.PI) / 180 * 0.3, // scale down for visual clarity
-      satelliteCount: 0, // will be set by engine
+      inclination: (avgInc * Math.PI) / 180 * 0.3,
+      satelliteCount: 0,
       debrisCount: 0,
       risk: 0,
     };
   });
 
-  // Sample satellites — take proportional representation, max ~300 total
-  const MAX_SATS = 300;
-  const totalInBuckets = activeBuckets.reduce((s, b) => s + b.count, 0);
-
+  // Create all satellites
   const satellites: Satellite[] = [];
-  activeBuckets.forEach((bucket, bandIdx) => {
-    const band = bands[bandIdx];
-    const sampleCount = Math.max(
-      3,
-      Math.round((bucket.count / totalInBuckets) * MAX_SATS)
+  let satIdx = 0;
+  for (const rec of leoSats) {
+    const alt = meanMotionToAltitude(rec.MEAN_MOTION);
+    const bucketIdx = activeBuckets.findIndex(
+      (b) => alt >= b.altMin && alt < b.altMax
     );
-    const step = Math.max(1, Math.floor(bucket.satellites.length / sampleCount));
+    if (bucketIdx < 0) continue;
+    const band = bands[bucketIdx];
+    satellites.push({
+      id: `${band.id}-sat-${satIdx++}`,
+      bandId: band.id,
+      angle: Math.random() * Math.PI * 2,
+      angularVelocity: 0.002 + Math.random() * 0.004,
+      active: true,
+    });
+  }
 
-    for (let i = 0; i < bucket.satellites.length && satellites.length < MAX_SATS; i += step) {
-      satellites.push({
-        id: `${band.id}-sat-${satellites.length}`,
-        bandId: band.id,
-        angle: Math.random() * Math.PI * 2,
-        angularVelocity: 0.002 + Math.random() * 0.004,
-        active: true,
-      });
-    }
-  });
+  // Create debris from real debris fields
+  const debris: DebrisFragment[] = [];
+  let debIdx = 0;
+  for (const rec of leoDebris) {
+    const alt = meanMotionToAltitude(rec.MEAN_MOTION);
+    const bucketIdx = activeBuckets.findIndex(
+      (b) => alt >= b.altMin && alt < b.altMax
+    );
+    if (bucketIdx < 0) continue;
+    const band = bands[bucketIdx];
+    debris.push({
+      id: `${band.id}-debris-${debIdx++}`,
+      bandId: band.id,
+      angle: Math.random() * Math.PI * 2,
+      angularVelocity: 0.004 + Math.random() * 0.008,
+      lifetime: 9999, // real debris persists
+    });
+  }
 
-  // Update band satellite counts
+  // Update band counts
   for (const band of bands) {
     band.satelliteCount = satellites.filter(
       (s) => s.bandId === band.id && s.active
     ).length;
+    band.debrisCount = debris.filter((d) => d.bandId === band.id).length;
   }
 
   return {
     totalTracked,
-    leoCount: leoRecords.length,
+    leoCount: leoSats.length,
+    debrisLoaded: debris.length,
     bands,
     satellites,
+    debris,
   };
 }
 
@@ -146,14 +224,14 @@ export function realDataToState(
   return {
     bands: data.bands,
     satellites: data.satellites,
-    debris: [],
+    debris: data.debris,
     collisionEffects: [],
     running: false,
     status: "stable",
     metrics: {
       time: 0,
       activeSatellites: data.satellites.length,
-      debrisCount: 0,
+      debrisCount: data.debris.length,
       collisions: 0,
       unusableBands: 0,
     },

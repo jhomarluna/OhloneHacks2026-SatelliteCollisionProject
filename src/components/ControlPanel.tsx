@@ -13,14 +13,19 @@ export function ControlPanel() {
 
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadInfo, setLoadInfo] = useState<string | null>(null);
 
   async function handleLoadRealData() {
     setLoading(true);
     setLoadError(null);
+    setLoadInfo(null);
     try {
       const data = await fetchRealSatelliteData();
       const state = realDataToState(data, config);
       loadRealData({ ...state, realDataTotal: data.totalTracked });
+      setLoadInfo(
+        `${data.satellites.length.toLocaleString()} satellites + ${data.debrisLoaded.toLocaleString()} debris fragments loaded`
+      );
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : "Failed to fetch");
     } finally {
@@ -48,8 +53,11 @@ export function ControlPanel() {
       </button>
       {realDataTotal != null && (
         <p className="real-data-badge">
-          {realDataTotal.toLocaleString()} tracked objects worldwide
+          {realDataTotal.toLocaleString()} tracked objects loaded from CelesTrak
         </p>
+      )}
+      {loadInfo && (
+        <p style={{ color: "#94a3b8", fontSize: 12, margin: "2px 0 0" }}>{loadInfo}</p>
       )}
       {loadError && <p style={{ color: "#ef4444", fontSize: 13 }}>{loadError}</p>}
 

@@ -4,7 +4,7 @@ import * as THREE from 'three'
 import { useSimStore } from '../store/simStore'
 
 const dummy = new THREE.Object3D()
-const MAX_VISIBLE = 400
+const MAX_VISIBLE = 2000
 
 export function Debris() {
   const meshRef = useRef<THREE.InstancedMesh>(null)
@@ -81,10 +81,8 @@ export function Debris() {
     mesh.count = visibleDebris.length
   })
 
-  const maxCount = Math.max(MAX_VISIBLE, 1)
-
   return (
-    <instancedMesh ref={meshRef} args={[undefined, undefined, maxCount]}>
+    <instancedMesh ref={meshRef} args={[undefined, undefined, MAX_VISIBLE]}>
       <octahedronGeometry args={[0.015, 0]} />
       <meshBasicMaterial toneMapped={false} />
     </instancedMesh>

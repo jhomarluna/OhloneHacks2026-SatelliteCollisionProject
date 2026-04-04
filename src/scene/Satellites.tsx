@@ -5,6 +5,7 @@ import { useSimStore } from '../store/simStore'
 
 const dummy = new THREE.Object3D()
 const SAT_COLOR = new THREE.Color('#a5f3fc')
+const MAX_INSTANCES = 20000 // pre-allocate for real satellite data
 
 export function Satellites() {
   const meshRef = useRef<THREE.InstancedMesh>(null)
@@ -45,8 +46,9 @@ export function Satellites() {
     if (!mesh) return
 
     const angles = anglesRef.current
+    const count = Math.min(activeSatellites.length, MAX_INSTANCES)
 
-    for (let i = 0; i < activeSatellites.length; i++) {
+    for (let i = 0; i < count; i++) {
       const sat = activeSatellites[i]
       const band = bandMap[sat.bandId]
       if (!band) continue
@@ -71,14 +73,12 @@ export function Satellites() {
     }
 
     mesh.instanceMatrix.needsUpdate = true
-    mesh.count = activeSatellites.length
+    mesh.count = count
   })
 
-  const maxCount = Math.max(activeSatellites.length, 1)
-
   return (
-    <instancedMesh ref={meshRef} args={[undefined, undefined, maxCount]}>
-      <sphereGeometry args={[0.025, 8, 8]} />
+    <instancedMesh ref={meshRef} args={[undefined, undefined, MAX_INSTANCES]}>
+      <sphereGeometry args={[0.012, 4, 4]} />
       <meshBasicMaterial color={SAT_COLOR} />
     </instancedMesh>
   )
